@@ -89,8 +89,12 @@ class Board:
     def _load_stop(self, stop_id):
         self.stop_id = stop_id
         self.loaded_at = time.time()
-        html = self._get_page(stop_id)
-        destinations = self._parse_page(html)
+        try:
+            html = self._get_page(stop_id)
+            destinations = self._parse_page(html)
+        except:
+            destinations = []
+            print('There was an issue getting the page')
 
         m0 = 0
         m1 = 0
@@ -116,10 +120,7 @@ class Board:
         if len(destinations) == 0:
             h = font2.render("No services available", True, YELLOW, BLACK)
             r = h.get_rect()
-            r.center = (
-                (settings.screen_width - r.width) // 2,
-                (settings.screen_height - r.height) // 2
-            )
+            r.center = (settings.screen_width // 2, settings.screen_height // 2)
             self.image.blit(h, r)
         else:
             y = (destinations[0][0].get_rect().height * len(destinations)) + ((len(destinations) - 1) * settings.destination_y_gap)
