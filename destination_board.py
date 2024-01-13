@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 import re
@@ -168,11 +168,95 @@ class Board:
 
         return destinations
 
+class Favourites:
+    def __init__(self, favourites):
+        self.favourites = favourites
+        self.loaded_at = 0
+
+        self.image = pygame.Surface((settings.screen_width, settings.screen_height))
+        self.rect = self.image.get_rect()
+
+    def draw(self):
+        diff = time.time() - self.loaded_at
+        if diff > 60:
+            self._load_favourites()
+
+        screen.fill(background)
+        screen.blit(self.image, self.rect)
+        pygame.display.flip()
+
+    def _load_favourites(self):
+        self.loaded_at = time.time()
+
+        rows = []
+        for fleet_number in self.favourites:
+            try:
+                html = self._get_page(fleet_number)
+                rows.append(font2.render(self._parse_page(html, fleet_number), True, YELLOW, BLACK))
+            except Exception as inst:
+                # print(inst)
+                rows = []
+                print('There was an issue getting the page')
+
+        self.image.fill(background)
+        i = font1.render('Favourites', True, YELLOW, BLACK)
+        r = i.get_rect()
+        r.x = (settings.screen_width - r.width) // 2
+        self.image.blit(i, r)
+
+        if len(rows) == 0:
+            h = font2.render("No services available", True, YELLOW, BLACK)
+            r = h.get_rect()
+            r.center = (settings.screen_width // 2, settings.screen_height // 2)
+            self.image.blit(h, r)
+        else:
+            y = (rows[0].get_rect().height * len(rows)) + ((len(rows) - 1) * settings.destination_y_gap)
+
+            offset_y = ((settings.screen_height - y) // 2) + r.height + 6
+
+            m = 0
+            for d in rows:
+                r = d.get_rect()
+                if r.width > m:
+                    m = r.width
+
+            offset_x = (settings.screen_width - m) // 2;
+
+            for d in rows:
+                r = d.get_rect()
+                r.x = offset_x
+                r.y = offset_y
+                self.image.blit(d, r)
+
+                offset_y += r.height + 5
+
+
+    def _get_page(self, fleet_number):
+        url = f"https://www.buses.co.uk/_ajax/vehicles/{fleet_number}"
+        r = requests.get(url)
+        return r.text
+
+    def _parse_page(self, html, fleet_number):
+        if "This vehicle's route is" in html:
+            i1 = html.index('<h3>') + 4
+            i2 = html.index('</h3>')
+            t = html[i1:i2]
+            return f"{fleet_number} is on route {t}"
+        else:
+            return f"{fleet_number} is at the garage"
+
 def load_stops():
     with open("config.yaml", 'r') as stream:
-        stops = yaml.safe_load(stream)
+        stops = yaml.safe_load(stream)['stops']
+        stops['0'] = '**Favourites**'
 
     return stops
+
+def load_favourites():
+    with open("config.yaml", 'r') as stream:
+        favourites = yaml.safe_load(stream)['favourites']
+
+    return favourites
 
 def where_the_user_clicked():
     pos = None
@@ -201,6 +285,9 @@ stops = load_stops()
 main = Stops(stops)
 board = Board(stops)
 
+favourites = load_favourites()
+faves = Favourites(favourites)
+
 screen = pygame.display.set_mode((settings.screen_width, settings.screen_height), settings.mode_flags)
 
 stop_id = None
@@ -208,6 +295,8 @@ stop_id = None
 while True:
     if stop_id == None:
         main.draw()
+    elif stop_id == '0':
+        faves.draw()
     else:
         board.draw(stop_id)
 
