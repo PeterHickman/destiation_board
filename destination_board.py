@@ -178,7 +178,7 @@ class Favourites:
 
     def draw(self):
         diff = time.time() - self.loaded_at
-        if diff > 60:
+        if diff > 300:
             self._load_favourites()
 
         screen.fill(background)
@@ -193,10 +193,8 @@ class Favourites:
             try:
                 html = self._get_page(fleet_number)
                 rows.append(font2.render(self._parse_page(html, fleet_number), True, YELLOW, BLACK))
-            except Exception as inst:
-                # print(inst)
-                rows = []
-                print('There was an issue getting the page')
+            except:
+                rows.append(font2.render(f"{fleet_number} is not in service", True, YELLOW, BLACK))
 
         self.image.fill(background)
         i = font1.render('Favourites', True, YELLOW, BLACK)
